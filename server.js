@@ -15,9 +15,7 @@ app.post("/toners", async (req, res) => {
    const { model, color = "", printers = "", stock = 0 } = req.body;
 
    if (!model || typeof model !== "string" || model.trim() === "") {
-      return res
-         .status(400)
-         .json({ error: "Model and stock are required fields." });
+      return res.status(400).json({ error: "Model is required" });
    }
 
    const toner = await prisma.toner.create({
@@ -30,6 +28,32 @@ app.post("/toners", async (req, res) => {
    });
 
    res.status(201).json(toner);
+});
+
+app.put("/toners/:id", async (req, res) => {
+   const tonerId = Number(req.params.id);
+   const { model, color, printers, stock } = req.body;
+
+   if (!model || typeof model !== "string" || model.trim() === "") {
+      return res.status(400).json({ error: "Model is required" });
+   }
+
+   try {
+      const toner = await prisma.toner.update({
+         data: {
+            model,
+            color,
+            printers,
+            stock,
+         },
+         where: {
+            id: tonerId,
+         },
+      });
+      res.json(toner);
+   } catch (error) {
+      res.status(404).json({ error: "Toner not found database" });
+   }
 });
 
 // Create a toner GET endpoint that returns a hardcoded lists of toner

@@ -1,36 +1,17 @@
 import express from "express";
+import { PrismaClient } from "./generated/prisma/client.js";
 
 const app = express();
+const prisma = new PrismaClient();
 
 app.get("/", (req, res) => {
    res.send("Hello! This is my first web server endpoint!");
 });
 
 // Create a toner GET endpoint that returns a hardcoded lists of toner
-app.get("/toners", (req, res) => {
-   res.json([
-      {
-         id: 1,
-         model: "Lexmark 501H",
-         color: "Black",
-         printers: ["MS610dn", "MS510dn"],
-         stock: 4,
-      },
-      {
-         id: 2,
-         model: "HP 12A Black",
-         color: "Black",
-         printers: ["LaserJet 1010", "LaserJet 1022"],
-         stock: 1,
-      },
-      {
-         id: 3,
-         model: "Xerox 006R",
-         color: "Cyan",
-         printers: ["VersaLink C400"],
-         stock: 7,
-      },
-   ]);
+app.get("/toners", async (req, res) => {
+   const toners = await prisma.toner.findMany();
+   res.json(toners);
 });
 
 app.listen(8000, () => {

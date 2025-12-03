@@ -30,6 +30,7 @@ app.post("/toners", async (req, res) => {
    res.status(201).json(toner);
 });
 
+// Put endpoint
 app.put("/toners/:id", async (req, res) => {
    const tonerId = Number(req.params.id);
    const { model, color, printers, stock } = req.body;
@@ -53,6 +54,20 @@ app.put("/toners/:id", async (req, res) => {
       res.json(toner);
    } catch (error) {
       res.status(404).json({ error: "Toner not found database" });
+   }
+});
+
+// Delete endpoint
+app.delete("/toners/:id", async (req, res) => {
+   const tonerId = req.params.id;
+
+   try {
+      await prisma.toner.delete({
+         where: { id: tonerId },
+      });
+      res.status(204).send();
+   } catch (error) {
+      res.status(404).json({ error: "Toner not found" });
    }
 });
 

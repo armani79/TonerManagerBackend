@@ -1,11 +1,72 @@
 import express from "express";
+import cors from "cors";
 import { PrismaClient } from "./generated/prisma/client.js";
+
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 
 const app = express();
 const prisma = new PrismaClient();
 
 app.use(express.json());
 
+app.use(
+   cors({
+      origin: "http://localhost:5173",
+      methods: ["GET", "POST", "PUT", "DELETE"],
+      credentials: true,
+   })
+);
+
+// FOR REGISTERING USERS:
+app.post("/register", async (req, res) => {
+   try {
+      const { email, password } = req.body;
+
+      if (!email || !password) {
+         return res
+            .status(400)
+            .json({ error: "Valid email and password required" });
+      }
+
+      const existingUser = await prisma.user.findUnique({
+         where: { email },
+      });
+
+      if (existingUser) {
+         return res
+            .status(400)
+            .json({ error: "Already existing User, please login" });
+      }
+
+      const hashed = await bcrypt.hash(password, 10);
+
+      const newUser = await prisma.user.create({
+         data: {
+            email,
+            password: hashed,
+         },
+      });
+
+      const token = jwt.sign(
+         { id: newUser.id, email: newUser.email },
+         process.env.JWT_SECRET,
+         { expiresIn: "1h" }
+      );
+
+      res.json({
+         message: "User registered successfully",
+         token,
+      });
+   } catch (error) {
+      console.error(error);
+      res.status(500).json({
+         error: "Ran into issue during registration, please try again",
+      });
+   }
+});
+
+// FOR TONER MODEL:
 app.get("/", (req, res) => {
    res.send("Hello! This is my first web server endpoint!");
 });
@@ -63,7 +124,7 @@ app.delete("/toners/:id", async (req, res) => {
 
    try {
       await prisma.toner.delete({
-         where: { id: tonerId },
+         where: { id: Number(tonerId) },
       });
       res.status(204).send();
    } catch (error) {

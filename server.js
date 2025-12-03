@@ -66,6 +66,46 @@ app.post("/register", async (req, res) => {
    }
 });
 
+app.post("/login", async (req, res) => {
+   try {
+      const { email, password } = req.body;
+
+      if (!email || !password) {
+         return res
+            .status(400)
+            .json({ error: "Email and password are required" });
+      }
+
+      const user = await prisma.user.findUnique({
+         where: { email },
+      });
+
+      if (!user) {
+         return res.status(400).json({ error: "Invalid email or password" });
+      }
+
+      const passwordMatch = await bcrypt.compare(password, user.password);
+
+      if (!passwordMatch) {
+         return res.status(400).json({ error: "Invalid email or password" });
+      }
+
+      const token = jwt.sign(
+         { id: user.id, email: user.email },
+         process.env.JWT_SECRET,
+         { expiresIn: "1h" }
+      );
+
+      return res.json({
+         message: "Login successful",
+         token,
+      });
+   } catch (error) {
+      console.error(error);
+      return res.status(500).json({ error: "Error trying to log in" });
+   }
+});
+
 // FOR TONER MODEL:
 app.get("/", (req, res) => {
    res.send("Hello! This is my first web server endpoint!");

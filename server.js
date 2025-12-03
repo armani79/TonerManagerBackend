@@ -18,6 +18,37 @@ app.use(
    })
 );
 
+// Middleware authentication
+function authMiddleware(req, res, next) {
+   const authHeader = req.headers.authorization;
+   if (!authHeader) {
+      return res.status(401).json({ error: "No token found" });
+   }
+
+   try {
+      const token = authHeader.split(" ")[1];
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      req.user = decoded;
+      next();
+   } catch (error) {
+      console.log(error);
+      res.status(401).json({ error: "Invalid token" });
+   }
+}
+
+app.get("/me", authMiddleware, async (req, res) => {
+   const userId = req.user.id;
+   const user = await prisma.user.findUnique({
+      where: { id: userId },
+   });
+   res.json(user);
+});
+
+// Verify if backend is running
+app.get("/", (req, res) => {
+   res.send("Hello! This is my first web server endpoint!");
+});
+
 // FOR REGISTERING USERS:
 app.post("/register", async (req, res) => {
    try {
@@ -66,6 +97,7 @@ app.post("/register", async (req, res) => {
    }
 });
 
+// FOR LOGGING IN
 app.post("/login", async (req, res) => {
    try {
       const { email, password } = req.body;
@@ -106,13 +138,10 @@ app.post("/login", async (req, res) => {
    }
 });
 
-// FOR TONER MODEL:
-app.get("/", (req, res) => {
-   res.send("Hello! This is my first web server endpoint!");
-});
+// PROTECTED ROUTES:
 
 // Post endpoint
-app.post("/toners", async (req, res) => {
+app.post("/toners", authMiddleware, async (req, res) => {
    const { model, color = "", printers = "", stock = 0 } = req.body;
 
    if (!model || typeof model !== "string" || model.trim() === "") {
@@ -132,7 +161,7 @@ app.post("/toners", async (req, res) => {
 });
 
 // Put endpoint
-app.put("/toners/:id", async (req, res) => {
+app.put("/toners/:id", authMiddleware, async (req, res) => {
    const tonerId = Number(req.params.id);
    const { model, color, printers, stock } = req.body;
 
@@ -159,7 +188,7 @@ app.put("/toners/:id", async (req, res) => {
 });
 
 // Delete endpoint
-app.delete("/toners/:id", async (req, res) => {
+app.delete("/toners/:id", authMiddleware, async (req, res) => {
    const tonerId = req.params.id;
 
    try {
@@ -173,7 +202,7 @@ app.delete("/toners/:id", async (req, res) => {
 });
 
 // Create a toner GET endpoint that returns a hardcoded lists of toner
-app.get("/toners", async (req, res) => {
+app.get("/toners", authMiddleware, async (req, res) => {
    const toners = await prisma.toner.findMany();
    res.json(toners);
 });

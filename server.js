@@ -18,6 +18,14 @@ app.use(
    })
 );
 
+// Admin-only Middleware
+function adminOnly(req, res, next) {
+   if (req.user.role != "admin") {
+      return res.status(403).json({ error: "Admin access only" });
+   }
+   next();
+}
+
 // Middleware authentication
 function authMiddleware(req, res, next) {
    const authHeader = req.headers.authorization;
@@ -76,11 +84,12 @@ app.post("/register", async (req, res) => {
          data: {
             email,
             password: hashed,
+            role: "user", // COULD ALSO BE ADMIN, MANUALLY ADJUSTED
          },
       });
 
       const token = jwt.sign(
-         { id: newUser.id, email: newUser.email },
+         { id: newUser.id, email: newUser.email, role: newUser.role },
          process.env.JWT_SECRET,
          { expiresIn: "1h" }
       );
@@ -123,7 +132,7 @@ app.post("/login", async (req, res) => {
       }
 
       const token = jwt.sign(
-         { id: user.id, email: user.email },
+         { id: user.id, email: user.email, role: user.role },
          process.env.JWT_SECRET,
          { expiresIn: "1h" }
       );
@@ -141,7 +150,7 @@ app.post("/login", async (req, res) => {
 // PROTECTED ROUTES:
 
 // Post endpoint
-app.post("/toners", authMiddleware, async (req, res) => {
+app.post("/toners", authMiddleware, adminOnly, async (req, res) => {
    const { model, color = "", printers = "", stock = 0 } = req.body;
 
    if (!model || typeof model !== "string" || model.trim() === "") {
@@ -153,15 +162,15 @@ app.post("/toners", authMiddleware, async (req, res) => {
          model,
          color,
          printers,
-         stock,
+         stock: Number(stock),
       },
    });
 
    res.status(201).json(toner);
 });
 
-// Put endpoint
-app.put("/toners/:id", authMiddleware, async (req, res) => {
+// Put endpoint for ADMIN
+app.put("/toners/:id", authMiddleware, adminOnly, async (req, res) => {
    const tonerId = Number(req.params.id);
    const { model, color, printers, stock } = req.body;
 
@@ -187,8 +196,39 @@ app.put("/toners/:id", authMiddleware, async (req, res) => {
    }
 });
 
+// Put endpoint for CHECKOUT/USER:
+app.put("/toners/:id/checkout", authMiddleware, async (req, res) => {
+   const tonerId = Number(req.params.id);
+   const { amount } = req.body;
+
+   if (!amount || amount <= 0) {
+      return res.status(400).json({ error: "Invalid checkout amount" });
+   }
+
+   try {
+      const toner = await prisma.toner.findUnique({
+         where: { id: tonerId },
+      });
+      if (!toner) {
+         return res.status(404).json({ error: "Toner not found" });
+      }
+      if (toner.stock < amount) {
+         return res.status(400).json({ error: "Not enough in stock" });
+      }
+      const updated = await prisma.toner.update({
+         where: { id: tonerId },
+         data: {
+            stock: { decrement: amount },
+         },
+      });
+      res.json(updated);
+   } catch (error) {
+      res.status(500).json({ error: "Could not update stock" });
+   }
+});
+
 // Delete endpoint
-app.delete("/toners/:id", authMiddleware, async (req, res) => {
+app.delete("/toners/:id", authMiddleware, adminOnly, async (req, res) => {
    const tonerId = req.params.id;
 
    try {

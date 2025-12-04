@@ -20,7 +20,7 @@ app.use(
 
 // Admin-only Middleware
 function adminOnly(req, res, next) {
-   if (req.user.role != "admin") {
+   if (req.user.role != "USER") {
       return res.status(403).json({ error: "Admin access only" });
    }
    next();
@@ -84,7 +84,7 @@ app.post("/register", async (req, res) => {
          data: {
             email,
             password: hashed,
-            role: "user", // COULD ALSO BE ADMIN, MANUALLY ADJUSTED
+            role: "USER", // COULD ALSO BE ADMIN, MANUALLY ADJUSTED
          },
       });
 
@@ -245,6 +245,11 @@ app.delete("/toners/:id", authMiddleware, adminOnly, async (req, res) => {
 app.get("/toners", authMiddleware, async (req, res) => {
    const toners = await prisma.toner.findMany();
    res.json(toners);
+});
+
+app.get("/users", async (req, res) => {
+   const users = await prisma.user.findMany();
+   res.json(users);
 });
 
 app.listen(8000, () => {

@@ -20,7 +20,7 @@ app.use(
 
 // Admin-only Middleware
 function adminOnly(req, res, next) {
-   if (req.user.role != "USER") {
+   if (req.user.role != "ADMIN") {
       return res.status(403).json({ error: "Admin access only" });
    }
    next();
@@ -36,6 +36,7 @@ function authMiddleware(req, res, next) {
    try {
       const token = authHeader.split(" ")[1];
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      console.log("Decoded user:", decoded);
       req.user = decoded;
       next();
    } catch (error) {

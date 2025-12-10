@@ -18,7 +18,7 @@ model Toner {
   id        Int      @id @default(autoincrement())
   model     String
   color     String
-  printers  String
+  printers  String[]
   stock     Int
   createdAt DateTime @default(now())
 }

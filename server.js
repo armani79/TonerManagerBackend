@@ -5,6 +5,7 @@ import { PrismaClient } from "./generated/prisma/client.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
+// initialize express app and prisma client
 const app = express();
 const prisma = new PrismaClient();
 
